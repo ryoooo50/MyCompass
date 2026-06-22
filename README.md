@@ -17,6 +17,13 @@ python3 -m http.server 8000
 
 その後、`http://localhost:8000` を開いてください。
 
+## 開発ドキュメント
+
+- [要件定義書](requirements.md)
+- [開発ルール](AGENTS.md)
+- [ADR一覧](docs/adr/README.md)
+- [開発ログ](developmentLog/)
+
 ## 現在の機能
 
 - 財務・タスク・研究・アルバイト・予定の全体表示
