@@ -1,0 +1,7 @@
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+node_modules/
+.env
+.env.*
+*.log
