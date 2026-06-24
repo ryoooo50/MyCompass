@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -13,7 +14,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
+      <body>
+        {children}
+        <Script
+          id="sw-register"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                  console.warn('[SW] Registration failed:', err);
+                });
+              }
+            `,
+          }}
+        />
+      </body>
     </html>
   )
 }

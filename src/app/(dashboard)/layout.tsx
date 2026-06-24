@@ -2,6 +2,7 @@
 
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
+import OfflineBanner from '@/components/ui/OfflineBanner'
 import { useState } from 'react'
 
 export default function DashboardLayout({
@@ -40,6 +41,7 @@ export default function DashboardLayout({
 
       {/* メインコンテンツ */}
       <div className="flex-1 flex flex-col min-w-0">
+        <OfflineBanner />
         <Header onMenuOpen={() => setMenuOpen(true)} />
         <main className="flex-1 p-4 md:p-6 overflow-auto">
           {children}
