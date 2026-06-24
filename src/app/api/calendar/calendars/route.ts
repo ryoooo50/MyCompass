@@ -4,13 +4,19 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ code: 'UNAUTHORIZED', message: '認証が必要です' }, { status: 401 })
   }
 
-  const providerToken = session.provider_token
+  const { data: settings } = await supabase
+    .from('user_settings')
+    .select('google_provider_token')
+    .eq('user_id', user.id)
+    .single()
+
+  const providerToken = settings?.google_provider_token
   if (!providerToken) {
     return NextResponse.json(
       { code: 'NO_PROVIDER_TOKEN', message: 'Google トークンが見つかりません。再ログインしてください。' },

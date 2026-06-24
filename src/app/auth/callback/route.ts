@@ -26,7 +26,20 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    await supabase.auth.exchangeCodeForSession(code)
+    const { data: { session } } = await supabase.auth.exchangeCodeForSession(code)
+
+    // provider_token はここでしか取れないため DB に保存する
+    if (session?.provider_token && session.user) {
+      await supabase.from('user_settings').upsert(
+        {
+          user_id: session.user.id,
+          google_provider_token: session.provider_token,
+          google_provider_refresh_token: session.provider_refresh_token ?? null,
+          google_token_updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+    }
   }
 
   return NextResponse.redirect(`${origin}/`)
