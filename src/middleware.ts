@@ -49,9 +49,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 許可メールアドレスチェック
-  const allowedEmail = process.env.ALLOWED_EMAIL
-  if (user && allowedEmail && user.email !== allowedEmail && !isPublicPath) {
+  // 許可メールアドレスチェック（カンマ区切りで複数指定可）
+  const allowedEmails = process.env.ALLOWED_EMAILS?.split(',').map(e => e.trim()).filter(Boolean)
+    ?? (process.env.ALLOWED_EMAIL ? [process.env.ALLOWED_EMAIL] : [])
+  if (user && allowedEmails.length > 0 && !allowedEmails.includes(user.email ?? '') && !isPublicPath) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('error', 'unauthorized')
