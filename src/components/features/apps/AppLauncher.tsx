@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/browser'
 import type { UserSettings, CustomApp } from '@/types'
 import { Toast } from '@/components/ui/Toast'
 import { SettingsForm } from './SettingsForm'
+import { NotionSync } from './NotionSync'
 
 interface AppLauncherProps {
   initialSettings: UserSettings | null
@@ -274,6 +275,12 @@ export function AppLauncher({ initialSettings, userId }: AppLauncherProps) {
             )}
           </div>
         </div>
+      </section>
+
+      {/* Notion同期 */}
+      <section>
+        <p className="label-eyebrow text-muted mb-3">Notion連携</p>
+        <NotionSync />
       </section>
 
       {/* 設定フォーム */}
