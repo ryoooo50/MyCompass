@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { ScheduleWidget } from '@/components/features/schedule/ScheduleWidget'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
       {/* 今週の予定 */}
       <div className="card p-5">
         <p className="card-title text-muted mb-4">今週の予定</p>
-        <p className="text-sm text-muted">Google Calendar 連携後に表示されます</p>
+        <ScheduleWidget days={7} compact />
       </div>
     </div>
   )
