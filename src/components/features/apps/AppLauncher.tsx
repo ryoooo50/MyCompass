@@ -121,6 +121,7 @@ export function AppLauncher({ initialSettings, userId }: AppLauncherProps) {
               notionHomeUrl: null,
               customApps: updatedApps,
               calendarIds: [],
+              taskCategories: [],
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             }

@@ -54,6 +54,7 @@ export function SettingsForm({ initialSettings, userId, onSaved }: SettingsFormP
         notionHomeUrl: data.notion_home_url as string | null,
         customApps: (data.custom_apps ?? []) as UserSettings['customApps'],
         calendarIds: (data.calendar_ids ?? []) as string[],
+        taskCategories: (data.task_categories ?? []) as string[],
         createdAt: data.created_at as string,
         updatedAt: data.updated_at as string,
       }

@@ -8,7 +8,7 @@ export interface Task {
   description: string | null
   priority: Priority
   dueDate: string | null
-  category: string | null
+  categories: string[]
   completed: boolean
   completedAt: string | null
   notionId: string | null
@@ -89,6 +89,7 @@ export interface UserSettings {
   notionHomeUrl: string | null
   customApps: CustomApp[]
   calendarIds: string[]
+  taskCategories: string[]
   createdAt: string
   updatedAt: string
 }

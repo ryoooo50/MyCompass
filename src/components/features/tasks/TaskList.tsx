@@ -7,6 +7,11 @@ import { TaskForm } from './TaskForm'
 import { TaskItem } from './TaskItem'
 import { Toast } from '@/components/ui/Toast'
 
+const DEFAULT_CATEGORIES = [
+  '研究', 'PAEB関連', 'パター関連', 'VEXUM', '自己研鑽',
+  'ゴルフ', '日常', '大学の課題', '遊び', 'キャディー',
+]
+
 type FilterStatus = 'all' | 'active' | 'completed'
 type FilterPriority = 'all' | 'high' | 'medium' | 'low'
 
@@ -14,12 +19,13 @@ interface TaskFormData {
   title: string
   priority: 'high' | 'medium' | 'low'
   dueDate: string | null
-  category: string | null
+  categories: string[]
 }
 
 interface TaskListProps {
   initial: Task[]
   userId: string
+  initialCategories: string[]
 }
 
 function mapRow(row: Record<string, unknown>): Task {
@@ -30,7 +36,7 @@ function mapRow(row: Record<string, unknown>): Task {
     description: row.description as string | null,
     priority: row.priority as Task['priority'],
     dueDate: row.due_date as string | null,
-    category: row.category as string | null,
+    categories: (row.categories as string[] | null) ?? [],
     completed: row.completed as boolean,
     completedAt: row.completed_at as string | null,
     notionId: row.notion_id as string | null,
@@ -42,17 +48,44 @@ function mapRow(row: Record<string, unknown>): Task {
 const STATUS_LABELS: Record<FilterStatus, string> = { all: 'すべて', active: '未完了', completed: '完了済み' }
 const PRIORITY_LABELS: Record<FilterPriority, string> = { all: '全優先度', high: '高', medium: '中', low: '低' }
 
-export function TaskList({ initial, userId }: TaskListProps) {
+export function TaskList({ initial, userId, initialCategories }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>(initial)
+  const [availableCategories, setAvailableCategories] = useState<string[]>(
+    initialCategories.length > 0 ? initialCategories : DEFAULT_CATEGORIES
+  )
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterPriority, setFilterPriority] = useState<FilterPriority>('all')
+  const [filterCategory, setFilterCategory] = useState<string>('all')
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const supabase = createClient()
   const showError = (msg: string) => setToast({ message: msg, type: 'error' })
+
+  const handleAddCategory = async (name: string) => {
+    if (availableCategories.includes(name)) return
+    const updated = [...availableCategories, name]
+    setAvailableCategories(updated)
+
+    const { data: existing } = await supabase
+      .from('user_settings')
+      .select('id')
+      .eq('user_id', userId)
+      .single()
+
+    if (existing) {
+      await supabase
+        .from('user_settings')
+        .update({ task_categories: updated })
+        .eq('user_id', userId)
+    } else {
+      await supabase
+        .from('user_settings')
+        .insert({ user_id: userId, task_categories: updated })
+    }
+  }
 
   const handleAdd = async (data: TaskFormData) => {
     setSubmitting(true)
@@ -65,7 +98,7 @@ export function TaskList({ initial, userId }: TaskListProps) {
       description: null,
       priority: data.priority,
       dueDate: data.dueDate,
-      category: data.category,
+      categories: data.categories,
       completed: false,
       completedAt: null,
       notionId: null,
@@ -77,7 +110,13 @@ export function TaskList({ initial, userId }: TaskListProps) {
 
     const { data: saved, error } = await supabase
       .from('tasks')
-      .insert({ user_id: userId, title: data.title, priority: data.priority, due_date: data.dueDate, category: data.category })
+      .insert({
+        user_id: userId,
+        title: data.title,
+        priority: data.priority,
+        due_date: data.dueDate,
+        categories: data.categories,
+      })
       .select()
       .single()
 
@@ -109,12 +148,17 @@ export function TaskList({ initial, userId }: TaskListProps) {
   const handleEdit = async (id: string, data: TaskFormData) => {
     setSubmitting(true)
     const prev = tasks.find(t => t.id === id)!
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...data, updatedAt: new Date().toISOString() } : t))
+    setTasks(tasks => tasks.map(t => t.id === id ? { ...t, ...data, updatedAt: new Date().toISOString() } : t))
     setEditingId(null)
 
     const { error } = await supabase
       .from('tasks')
-      .update({ title: data.title, priority: data.priority, due_date: data.dueDate, category: data.category })
+      .update({
+        title: data.title,
+        priority: data.priority,
+        due_date: data.dueDate,
+        categories: data.categories,
+      })
       .eq('id', id)
 
     if (error) {
@@ -139,6 +183,7 @@ export function TaskList({ initial, userId }: TaskListProps) {
   const filtered = tasks
     .filter(t => filterStatus === 'all' || (filterStatus === 'active' ? !t.completed : t.completed))
     .filter(t => filterPriority === 'all' || t.priority === filterPriority)
+    .filter(t => filterCategory === 'all' || t.categories.includes(filterCategory))
     .sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1
       const aOver = !a.completed && !!a.dueDate && a.dueDate < today
@@ -155,7 +200,6 @@ export function TaskList({ initial, userId }: TaskListProps) {
 
   return (
     <div className="space-y-4">
-      {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-heading text-navy">タスク管理</h1>
@@ -172,45 +216,72 @@ export function TaskList({ initial, userId }: TaskListProps) {
         </button>
       </div>
 
-      {/* 追加フォーム */}
       {showForm && (
         <div className="card p-4">
-          <TaskForm onSubmit={handleAdd} onCancel={() => setShowForm(false)} loading={submitting} />
+          <TaskForm
+            availableCategories={availableCategories}
+            onSubmit={handleAdd}
+            onCancel={() => setShowForm(false)}
+            onAddCategory={handleAddCategory}
+            loading={submitting}
+          />
         </div>
       )}
 
-      {/* フィルター */}
-      <div className="flex gap-2 flex-wrap">
-        {(Object.keys(STATUS_LABELS) as FilterStatus[]).map(s => (
+      <div className="space-y-2">
+        <div className="flex gap-2 flex-wrap">
+          {(Object.keys(STATUS_LABELS) as FilterStatus[]).map(s => (
+            <button
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                filterStatus === s ? 'bg-navy text-white border-navy' : 'border-line text-muted hover:border-navy hover:text-navy'
+              }`}
+            >
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+          <div className="w-px bg-line mx-1" />
+          {(Object.keys(PRIORITY_LABELS) as FilterPriority[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setFilterPriority(p)}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                filterPriority === p ? 'bg-navy text-white border-navy' : 'border-line text-muted hover:border-navy hover:text-navy'
+              }`}
+            >
+              {PRIORITY_LABELS[p]}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-1.5 flex-wrap">
           <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
+            onClick={() => setFilterCategory('all')}
             className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-              filterStatus === s ? 'bg-navy text-white border-navy' : 'border-line text-muted hover:border-navy hover:text-navy'
+              filterCategory === 'all' ? 'bg-accent text-white border-accent' : 'border-line text-muted hover:border-accent hover:text-accent'
             }`}
           >
-            {STATUS_LABELS[s]}
+            全カテゴリー
           </button>
-        ))}
-        <div className="w-px bg-line mx-1" />
-        {(Object.keys(PRIORITY_LABELS) as FilterPriority[]).map(p => (
-          <button
-            key={p}
-            onClick={() => setFilterPriority(p)}
-            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-              filterPriority === p ? 'bg-navy text-white border-navy' : 'border-line text-muted hover:border-navy hover:text-navy'
-            }`}
-          >
-            {PRIORITY_LABELS[p]}
-          </button>
-        ))}
+          {availableCategories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setFilterCategory(filterCategory === cat ? 'all' : cat)}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                filterCategory === cat ? 'bg-accent text-white border-accent' : 'border-line text-muted hover:border-accent hover:text-accent'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* タスク一覧 */}
       <div className="card divide-y divide-line">
         {filtered.length === 0 ? (
           <div className="p-8 text-center text-muted text-sm">
-            {filterStatus === 'all' && filterPriority === 'all'
+            {filterStatus === 'all' && filterPriority === 'all' && filterCategory === 'all'
               ? '「タスクを追加」からタスクを作成してください'
               : 'この条件に一致するタスクがありません'}
           </div>
@@ -220,8 +291,10 @@ export function TaskList({ initial, userId }: TaskListProps) {
               <div key={task.id} className="p-4">
                 <TaskForm
                   initial={task}
+                  availableCategories={availableCategories}
                   onSubmit={data => handleEdit(task.id, data)}
                   onCancel={() => setEditingId(null)}
+                  onAddCategory={handleAddCategory}
                   loading={submitting}
                 />
               </div>

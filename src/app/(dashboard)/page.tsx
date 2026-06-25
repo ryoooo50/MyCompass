@@ -69,7 +69,7 @@ export default async function DashboardPage() {
     // 5. 今日のタスク（最大6件）
     supabase
       .from('tasks')
-      .select('id, user_id, title, priority, due_date, category, completed, completed_at, created_at, updated_at, description, notion_id')
+      .select('id, user_id, title, priority, due_date, categories, completed, completed_at, created_at, updated_at, description, notion_id')
       .eq('user_id', user.id)
       .eq('completed', false)
       .or(`due_date.eq.${todayJst},priority.eq.high`)
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
     description: row.description as string | null,
     priority: row.priority as Task['priority'],
     dueDate: row.due_date as string | null,
-    category: row.category as string | null,
+    categories: (row.categories as string[] | null) ?? [],
     completed: row.completed as boolean,
     completedAt: row.completed_at as string | null,
     notionId: row.notion_id as string | null,

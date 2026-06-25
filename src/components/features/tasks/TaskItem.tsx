@@ -51,11 +51,11 @@ export function TaskItem({ task, today, onToggle, onEdit, onDelete }: TaskItemPr
               {isOverdue ? '⚠ 期限切れ · ' : ''}{task.dueDate}
             </span>
           )}
-          {task.category && (
-            <span className="text-xs text-muted bg-bg px-2 py-0.5 rounded-full border border-line">
-              {task.category}
+          {task.categories.map(cat => (
+            <span key={cat} className="text-xs text-muted bg-bg px-2 py-0.5 rounded-full border border-line">
+              {cat}
             </span>
-          )}
+          ))}
         </div>
       </div>
 

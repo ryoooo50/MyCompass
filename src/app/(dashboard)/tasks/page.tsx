@@ -8,19 +8,19 @@ export default async function TasksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data } = await supabase
-    .from('tasks')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const [{ data: taskRows }, { data: settings }] = await Promise.all([
+    supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+    supabase.from('user_settings').select('task_categories').eq('user_id', user.id).single(),
+  ])
 
-  const tasks: Task[] = (data ?? []).map(row => ({
+  const tasks: Task[] = (taskRows ?? []).map(row => ({
     id: row.id,
     userId: row.user_id,
     title: row.title,
     description: row.description,
     priority: row.priority,
     dueDate: row.due_date,
-    category: row.category,
+    categories: (row.categories as string[] | null) ?? [],
     completed: row.completed,
     completedAt: row.completed_at,
     notionId: row.notion_id,
@@ -28,5 +28,7 @@ export default async function TasksPage() {
     updatedAt: row.updated_at,
   }))
 
-  return <TaskList initial={tasks} userId={user.id} />
+  const initialCategories: string[] = (settings?.task_categories as string[] | null) ?? []
+
+  return <TaskList initial={tasks} userId={user.id} initialCategories={initialCategories} />
 }
